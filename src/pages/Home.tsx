@@ -11,21 +11,40 @@ import { searchResults, Result } from '../data/results';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { playTick } from '../utils/sound';
-
-const SEARCH_FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/search`;
-
+// --- DIRECT SERPER API CONNECTION ---
 async function fetchLiveResults(query: string): Promise<Result[]> {
-  const res = await fetch(SEARCH_FN_URL, {
+  // PASTE YOUR REAL SERPER API KEY HERE:
+  const API_KEY = 'PASTE_YOUR_KEY_HERE'; 
+
+  const res = await fetch('https://google.serper.dev/search', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+      'X-API-KEY': API_KEY.trim(),
     },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ 
+      q: query,
+      gl: 'au', // Australian results
+      hl: 'en', // English
+      num: 12 
+    }),
   });
+
   if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   const data = await res.json();
-  return data.results as Result[];
+  
+  // Maps Serper data to exactly what your Results page expects
+  return (data.organic || []).map((item: any) => {
+    let host = 'link';
+    try { host = new URL(item.link).hostname.replace('www.', ''); } catch (e) {}
+    return {
+      title: item.title || 'No Title',
+      link: item.link || '#',
+      url: item.link || '#', // Included both link and url just in case the old types need it!
+      snippet: item.snippet || '',
+      source: host
+    };
+  });
 }
 
 
