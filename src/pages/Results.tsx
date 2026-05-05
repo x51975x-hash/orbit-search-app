@@ -1,87 +1,177 @@
+import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { ArrowLeft, ExternalLink, QrCode, Share2, Bookmark } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Search, Moon, Sun, Grid, Bookmark, Layers, 
+  Share2, RotateCcw, PlusSquare, ExternalLink, 
+  Trash2, Plus, Edit3 
+} from 'lucide-react';
 import Logo from '../components/Logo';
+import { useApp } from '../context/AppContext';
 
 export default function Results() {
   const location = useLocation();
   const navigate = useNavigate();
-  // Catch the results sent from the Home page
-  const { results, query } = location.state || { results: [], query: '' };
+  const { darkMode, toggleDarkMode } = useApp();
+  const { results: initialResults, query } = location.state || { results: [], query: '' };
+  
+  const [deck, setDeck] = useState(initialResults);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const handleDismiss = () => {
+    if (currentIndex < deck.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    }
+  };
+
+  const currentCard = deck[currentIndex];
+
+  if (!currentCard) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-slate-900">
+        <button onClick={() => navigate('/')} className="text-blue-500 underline">No results. Back to home.</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-[#f0f4f8] dark:bg-slate-900 pb-20">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-gray-200 dark:border-white/10 px-4 py-4">
-        <div className="max-w-7xl mx-auto flex items-center gap-6">
-          <button 
-            onClick={() => navigate('/')}
-            className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
-          >
-            <ArrowLeft className="text-gray-600 dark:text-gray-400" />
-          </button>
+    <div className={`min-h-screen flex flex-col transition-colors duration-500 ${darkMode ? 'bg-slate-900 text-white' : 'bg-[#f0f4f8] text-gray-800'}`}>
+      
+      {/* 1. TOP NAV BAR */}
+      <header className="px-6 py-4 flex items-center justify-between border-b border-transparent">
+        <div className="flex items-center gap-2">
           <Logo size="sm" />
-          <div className="flex-1 max-w-2xl">
-            <div className="px-4 py-2 bg-gray-100 dark:bg-white/5 rounded-full text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10">
-              {query}
-            </div>
+        </div>
+        
+        <div className="flex-1 text-center">
+          <span className="text-sm text-gray-400 font-medium">"{query}"</span>
+        </div>
+
+        <div className="flex items-center gap-4 text-gray-400">
+          <Grid size={18} className="cursor-pointer hover:text-blue-500" />
+          <div className="relative">
+             <Bookmark size={18} className="cursor-pointer hover:text-blue-500" />
+             <span className="absolute -top-2 -right-2 bg-green-500 text-[10px] text-white px-1 rounded-full">2</span>
           </div>
+          <div className="relative">
+            <Layers size={18} className="cursor-pointer hover:text-blue-500" />
+            <span className="absolute -top-2 -right-2 bg-blue-500 text-[10px] text-white px-1 rounded-full">1</span>
+          </div>
+          <Search size={18} className="cursor-pointer hover:text-blue-500" onClick={() => navigate('/')} />
+          <button onClick={toggleDarkMode}>
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center text-white text-xs font-bold">U</div>
         </div>
       </header>
 
-      {/* Results Grid */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {results.map((result: any, index: number) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-white dark:bg-white/5 rounded-3xl p-6 border border-gray-200 dark:border-white/10 shadow-sm hover:shadow-xl transition-all group"
-            >
-              <div className="flex justify-between items-start mb-4">
-                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                  {result.source}
-                </span>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full"><Bookmark size={16} /></button>
-                  <button className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full"><Share2 size={16} /></button>
-                </div>
-              </div>
+      {/* 2. SUB-MENU ACTIONS */}
+      <div className="flex justify-center gap-6 py-2 text-[11px] font-bold uppercase tracking-widest text-red-400/80">
+        <button className="flex items-center gap-1 hover:text-red-500"><X size={12} /> Skip</button>
+        <button className="flex items-center gap-1 text-blue-400 hover:text-blue-500"><Share2 size={12} /> Share</button>
+        <button className="flex items-center gap-1 text-green-500 hover:text-green-600"><Bookmark size={12} /> Save</button>
+        <button className="flex items-center gap-1 text-orange-400 hover:text-orange-500">Grid <Layers size={12} /></button>
+      </div>
 
-              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2">
-                {result.title}
-              </h3>
-              
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-3">
-                {result.snippet}
+      {/* 3. MAIN CARD DECK */}
+      <main className="flex-1 relative flex items-center justify-center p-4">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentIndex}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            onDragEnd={(_, info) => {
+              if (Math.abs(info.offset.x) > 100) handleDismiss();
+            }}
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ x: info => info.offset?.x > 0 ? 500 : -500, opacity: 0, rotate: 10 }}
+            className="relative w-full max-w-[420px] bg-white dark:bg-zinc-900 rounded-[40px] shadow-2xl border border-gray-100 dark:border-white/5 flex flex-col p-8 overflow-hidden"
+          >
+            {/* Inner Card Icons */}
+            <div className="absolute top-6 right-8 flex gap-3 text-gray-300">
+               <PlusSquare size={18} className="hover:text-blue-500 cursor-pointer" />
+               <Bookmark size={18} className="hover:text-blue-500 cursor-pointer" />
+               <RotateCcw size={18} className="hover:text-blue-500 cursor-pointer" onClick={() => setCurrentIndex(0)} />
+            </div>
+
+            {/* QR Code */}
+            <div className="flex justify-center mb-8 mt-4">
+              <div className="p-2 bg-white rounded-xl shadow-sm border border-gray-50">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(currentCard.link)}`} 
+                  alt="QR"
+                  className="w-36 h-36"
+                />
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 flex flex-col">
+              <p className="text-[11px] text-gray-400 mb-1">{currentCard.source}</p>
+              <h2 className="text-xl font-bold text-blue-700 dark:text-blue-400 leading-tight mb-3">
+                {currentCard.title}
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-4">
+                {currentCard.snippet}
               </p>
+            </div>
 
-              <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100 dark:border-white/5">
-                <a
-                  href={result.link}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  Visit Site <ExternalLink size={14} />
-                </a>
-                <div className="p-2 bg-gray-50 dark:bg-white/5 rounded-lg" title="Scan to open on phone">
-                  <QrCode size={20} className="text-gray-400" />
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+            {/* Visit & Bottom Text */}
+            <div className="mt-6 flex flex-col items-center gap-4">
+               <a href={currentCard.link} target="_blank" rel="noreferrer" className="self-end text-gray-400 hover:text-blue-500">
+                  <ExternalLink size={18} />
+               </a>
+               <p className="text-[10px] text-gray-300 uppercase tracking-widest">
+                 tap to see more · drag to interact
+               </p>
+            </div>
+          </motion.div>
+        </AnimatePresence>
 
-        {results.length === 0 && (
-          <div className="text-center py-20">
-            <p className="text-gray-500">No results found for "{query}"</p>
-            <button onClick={() => navigate('/')} className="mt-4 text-blue-500 underline">Try another search</button>
+        {/* 4. FLOATING FOOTER BUTTONS */}
+        <div className="absolute bottom-10 left-0 right-0 px-10 flex justify-between items-center text-gray-400">
+          <div className="flex flex-col items-center gap-1 cursor-pointer hover:text-blue-500">
+            <Share2 size={20} />
+            <span className="text-[10px] font-bold uppercase">Share</span>
           </div>
-        )}
+          
+          <div className="flex gap-12">
+            <div className="flex flex-col items-center gap-1 cursor-pointer hover:text-blue-500">
+              <Edit3 size={20} />
+              <span className="text-[10px] font-bold uppercase">Edit</span>
+            </div>
+            <div className="flex flex-col items-center gap-1 cursor-pointer hover:text-blue-500">
+              <Plus size={20} />
+              <span className="text-[10px] font-bold uppercase">Add to</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-center gap-1 cursor-pointer hover:text-red-500">
+            <Trash2 size={20} />
+            <span className="text-[10px] font-bold uppercase">Bin</span>
+          </div>
+        </div>
       </main>
+
+      {/* Pagination Dots */}
+      <footer className="pb-6 flex justify-center gap-1.5">
+        {deck.slice(0, 10).map((_, i) => (
+          <div 
+            key={i} 
+            className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentIndex ? 'bg-gray-400' : 'bg-gray-200 dark:bg-white/10'}`} 
+          />
+        ))}
+      </footer>
     </div>
+  );
+}
+
+// Helper X icon since it was used in sub-menu
+function X({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
   );
 }
