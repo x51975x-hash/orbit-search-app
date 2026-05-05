@@ -19,8 +19,9 @@ export default function Results() {
   const [deck, setDeck] = useState(initialResults);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [dismissedCount, setDismissedCount] = useState(0);
+  const [exitDirection, setExitDirection] = useState(0); // Tracks which way the card flies off
 
-  // --- FULLY WIRED BUTTON LOGIC ---
+  // --- SWIPE & BUTTON LOGIC ---
   const handleDismiss = () => {
     if (currentIndex < deck.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -28,6 +29,17 @@ export default function Results() {
     } else {
       alert("You've reached the end of the deck!");
     }
+  };
+
+  const handleSkip = () => {
+    setExitDirection(-500); // Fly left
+    handleDismiss();
+  };
+
+  const handleSave = () => {
+    setExitDirection(500); // Fly right
+    alert("Card saved to bookmarks!");
+    handleDismiss();
   };
 
   const handleUndo = () => {
@@ -99,9 +111,9 @@ export default function Results() {
 
       {/* 2. SUB-MENU ACTIONS */}
       <div className="flex justify-center gap-6 py-2 text-[11px] font-bold uppercase tracking-widest text-red-400/80 z-10">
-        <button onClick={handleDismiss} className="flex items-center gap-1 hover:text-red-500 transition-colors"><X size={12} /> Skip</button>
+        <button onClick={handleSkip} className="flex items-center gap-1 hover:text-red-500 transition-colors"><X size={12} /> Skip</button>
         <button onClick={handleShare} className="flex items-center gap-1 text-blue-400 hover:text-blue-500 transition-colors"><Share2 size={12} /> Share</button>
-        <button onClick={() => handleComingSoon('Save')} className="flex items-center gap-1 text-green-500 hover:text-green-600 transition-colors"><Bookmark size={12} /> Save</button>
+        <button onClick={handleSave} className="flex items-center gap-1 text-green-500 hover:text-green-600 transition-colors"><Bookmark size={12} /> Save</button>
         <button onClick={() => handleComingSoon('Grid View')} className="flex items-center gap-1 text-orange-400 hover:text-orange-500 transition-colors text-opacity-50">Grid</button>
       </div>
 
@@ -143,14 +155,31 @@ export default function Results() {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
+            drag // Allows dragging in all directions
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }} // Snaps back if released early
+            dragElastic={0.7} // Makes the drag feel smooth and natural
             onDragEnd={(_, info) => {
-              if (Math.abs(info.offset.x) > 100) handleDismiss();
+              const dx = info.offset.x;
+              const dy = info.offset.y;
+              const absX = Math.abs(dx);
+              const absY = Math.abs(dy);
+
+              // Needs to be dragged at least 80 pixels to trigger an action
+              if (Math.max(absX, absY) > 80) {
+                if (absX > absY) {
+                  // Horizontal Swipe
+                  if (dx > 0) handleSave(); // Swipe Right
+                  else handleSkip();        // Swipe Left
+                } else {
+                  // Vertical Swipe
+                  if (dy < 0) handleShare();                   // Swipe Up
+                  else handleComingSoon('Grid View');          // Swipe Down
+                }
+              }
             }}
             initial={{ scale: 0.95, opacity: 0, y: 10 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ x: info => info.offset?.x > 0 ? 500 : -500, opacity: 0, rotate: 5 }}
+            exit={{ x: exitDirection, opacity: 0, rotate: exitDirection > 0 ? 8 : -8 }} // Flies off in the correct direction
             className="relative w-full max-w-[400px] bg-white dark:bg-zinc-900 rounded-[32px] shadow-2xl border border-gray-100 dark:border-white/5 flex flex-col overflow-hidden cursor-grab active:cursor-grabbing z-10"
             style={{ height: '580px' }}
           >
@@ -162,14 +191,13 @@ export default function Results() {
             </div>
 
             {/* Custom Orbit QR Code */}
-            <div className="flex justify-center mt-12 mb-4">
+            <div className="flex justify-center mt-12 mb-4 pointer-events-none">
               <div className="relative">
                 <img 
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(currentCard.link)}`} 
                   alt="QR Code"
                   className="w-48 h-48 rounded-2xl p-1"
                 />
-                {/* The 'O' Logo inside the QR code */}
                 <div className="absolute inset-0 m-auto w-10 h-10 bg-white rounded-full flex items-center justify-center border-4 border-white shadow-sm">
                   <div className="w-8 h-8 rounded-full border-[3px] border-blue-500"></div>
                 </div>
@@ -177,7 +205,7 @@ export default function Results() {
             </div>
 
             {/* Content Text */}
-            <div className="px-8 flex-1 flex flex-col">
+            <div className="px-8 flex-1 flex flex-col pointer-events-none">
               <p className="text-[11px] text-gray-400 mb-2 truncate">{currentCard.source}</p>
               <h2 className="text-xl font-medium text-[#1a40b3] dark:text-blue-400 leading-snug mb-3 line-clamp-2">
                 {currentCard.title}
@@ -187,7 +215,7 @@ export default function Results() {
               </p>
             </div>
 
-            {/* Bottom Card Actions (Edit, Add To) */}
+            {/* Bottom Card Actions */}
             <div className="px-8 pb-10 pt-4 flex items-center justify-between text-gray-300 relative">
               <div className="flex flex-col items-center cursor-pointer hover:text-blue-500 transition-colors" onClick={() => handleComingSoon('Edit')}>
                 <SlidersHorizontal size={20} strokeWidth={1.5} />
@@ -207,7 +235,7 @@ export default function Results() {
               </div>
 
               {/* Floating External Link Icon */}
-              <a href={currentCard.link} target="_blank" rel="noreferrer" className="absolute right-8 bottom-3 text-gray-400 hover:text-blue-500 transition-colors">
+              <a href={currentCard.link} target="_blank" rel="noreferrer" className="absolute right-8 bottom-3 text-gray-400 hover:text-blue-500 transition-colors z-20">
                  <ExternalLink size={16} />
               </a>
             </div>
