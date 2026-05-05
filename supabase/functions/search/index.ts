@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const apiKey = const apiKey = "tvly-dev-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";
+    const apiKey = Deno.env.get("TAVILY_API_KEY");
     if (!apiKey) {
       return new Response(
         JSON.stringify({ error: "TAVILY_API_KEY not configured" }),
