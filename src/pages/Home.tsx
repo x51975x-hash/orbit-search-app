@@ -14,7 +14,7 @@ import { playTick } from '../utils/sound';
 // --- DIRECT SERPER API CONNECTION ---
 async function fetchLiveResults(query: string): Promise<Result[]> {
   // PASTE YOUR REAL SERPER API KEY HERE:
-  const API_KEY = 'PASTE_YOUR_KEY_HERE'; 
+  const API_KEY = '9193c3a86de5db51c2e55ee6a0b82a5b69daa08d'; 
 
   const res = await fetch('https://google.serper.dev/search', {
     method: 'POST',
