@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Search, Moon, Sun, Grid, Bookmark, Layers, 
+  Search, Moon, Sun, Grid, Bookmark, Folder, 
   Share2, RotateCcw, ExternalLink, Trash2, 
-  Plus, SlidersHorizontal, FolderPlus
+  Plus, SlidersHorizontal, FolderPlus, Undo2,
+  Mail, Twitter, Github
 } from 'lucide-react';
 import Logo from '../components/Logo';
 import { useApp } from '../context/AppContext';
@@ -13,17 +14,26 @@ export default function Results() {
   const location = useLocation();
   const navigate = useNavigate();
   const { darkMode, toggleDarkMode } = useApp();
-  const { results: initialResults, query } = location.state || { results: [], query: '' };
+  const { results: initialResults } = location.state || { results: [] };
   
   const [deck, setDeck] = useState(initialResults);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [dismissedCount, setDismissedCount] = useState(0);
 
-  // --- BUTTON LOGIC ---
+  // --- FULLY WIRED BUTTON LOGIC ---
   const handleDismiss = () => {
     if (currentIndex < deck.length - 1) {
       setCurrentIndex(prev => prev + 1);
+      setDismissedCount(prev => prev + 1);
     } else {
       alert("You've reached the end of the deck!");
+    }
+  };
+
+  const handleUndo = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+      setDismissedCount(prev => prev - 1);
     }
   };
 
@@ -37,7 +47,7 @@ export default function Results() {
           url: currentCard.link,
         });
       } catch (err) {
-        console.log('Share canceled or failed', err);
+        console.log('Share canceled');
       }
     } else {
       navigator.clipboard.writeText(currentCard.link);
@@ -46,9 +56,9 @@ export default function Results() {
   };
 
   const handleComingSoon = (feature: string) => {
-    alert(`${feature} feature coming soon!`);
+    alert(`${feature} coming soon!`);
   };
-  // ------------------------
+  // --------------------------------
 
   const currentCard = deck[currentIndex];
 
@@ -68,26 +78,22 @@ export default function Results() {
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
           <Logo size="sm" />
         </div>
-        
-        <div className="flex-1 text-center cursor-pointer" onClick={() => navigate('/')}>
-          <span className="text-sm text-gray-400 hover:text-blue-500 transition-colors font-medium">"{query}"</span>
-        </div>
 
-        <div className="flex items-center gap-4 text-gray-400">
+        <div className="flex items-center gap-5 text-gray-400">
           <Grid size={18} className="cursor-pointer hover:text-blue-500" onClick={() => handleComingSoon('Grid View')} />
           <div className="relative">
-             <Bookmark size={18} className="cursor-pointer hover:text-blue-500" onClick={() => handleComingSoon('Saved Bookmarks')} />
-             <span className="absolute -top-2 -right-2 bg-green-500 text-[10px] text-white px-1 rounded-full border-2 border-[#f0f4f8] dark:border-slate-900">2</span>
-          </div>
-          <div className="relative">
-            <Layers size={18} className="cursor-pointer hover:text-blue-500" onClick={() => handleComingSoon('Decks')} />
-            <span className="absolute -top-2 -right-2 bg-blue-500 text-[10px] text-white px-1 rounded-full border-2 border-[#f0f4f8] dark:border-slate-900">1</span>
+             <Folder size={18} className="cursor-pointer hover:text-blue-500" onClick={() => handleComingSoon('Folders')} />
+             <span className="absolute -top-2 -right-2 bg-green-500 text-[10px] text-white px-1.5 py-0.5 rounded-full border-2 border-[#f0f4f8] dark:border-slate-900">2</span>
           </div>
           <Search size={18} className="cursor-pointer hover:text-blue-500" onClick={() => navigate('/')} />
           <button onClick={toggleDarkMode} className="hover:text-blue-500 transition-colors">
             {darkMode ? <Sun size={18} /> : <Moon size={18} />}
           </button>
-          <div className="w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-pointer hover:scale-105 transition-transform shadow-sm">U</div>
+          
+          <div className="flex items-center gap-2 bg-white dark:bg-white/10 px-3 py-1.5 rounded-full shadow-sm cursor-pointer hover:bg-gray-50 border border-gray-100 dark:border-white/5">
+            <div className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-[10px] font-bold">U</div>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300">Google User</span>
+          </div>
         </div>
       </header>
 
@@ -96,22 +102,44 @@ export default function Results() {
         <button onClick={handleDismiss} className="flex items-center gap-1 hover:text-red-500 transition-colors"><X size={12} /> Skip</button>
         <button onClick={handleShare} className="flex items-center gap-1 text-blue-400 hover:text-blue-500 transition-colors"><Share2 size={12} /> Share</button>
         <button onClick={() => handleComingSoon('Save')} className="flex items-center gap-1 text-green-500 hover:text-green-600 transition-colors"><Bookmark size={12} /> Save</button>
-        <button onClick={() => handleComingSoon('Grid View')} className="flex items-center gap-1 text-orange-400 hover:text-orange-500 transition-colors">Grid <Layers size={12} /></button>
+        <button onClick={() => handleComingSoon('Grid View')} className="flex items-center gap-1 text-orange-400 hover:text-orange-500 transition-colors text-opacity-50">Grid</button>
       </div>
 
-      {/* 3. MAIN CARD DECK */}
+      {/* 3. MAIN AREA */}
       <main className="flex-1 relative flex items-center justify-center p-4">
         
-        {/* BACKGROUND FLOATING BUTTONS (Share / Bin) */}
-        <div className="absolute bottom-10 left-10 flex flex-col items-center text-gray-400 hover:text-blue-500 cursor-pointer z-0 transition-colors" onClick={handleShare}>
+        {/* FLOATING ACTION: UNDO */}
+        <AnimatePresence>
+          {dismissedCount > 0 && (
+            <motion.button 
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              onClick={handleUndo}
+              className="absolute bottom-10 left-10 flex items-center gap-2 bg-gray-200/60 dark:bg-white/10 backdrop-blur-md px-4 py-2 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-300/60 transition-colors z-20"
+            >
+              <Undo2 size={16} />
+              <span className="text-sm font-semibold">Undo</span>
+              <div className="w-5 h-5 bg-yellow-400 text-black rounded-full flex items-center justify-center text-[10px] font-bold">
+                {dismissedCount}
+              </div>
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* FLOATING ACTION: SHARE */}
+        <div className="absolute bottom-10 left-1/4 flex flex-col items-center text-gray-400 hover:text-blue-500 cursor-pointer z-0 transition-colors" onClick={handleShare}>
           <Share2 size={24} strokeWidth={1.5} />
-          <span className="text-[10px] font-bold uppercase mt-2">Share</span>
-        </div>
-        <div className="absolute bottom-10 right-10 flex flex-col items-center text-gray-400 hover:text-red-500 cursor-pointer z-0 transition-colors" onClick={() => handleComingSoon('Move to Bin')}>
-          <Trash2 size={24} strokeWidth={1.5} />
-          <span className="text-[10px] font-bold uppercase mt-2">Bin</span>
+          <span className="text-[10px] font-bold mt-2">Share</span>
         </div>
 
+        {/* FLOATING ACTION: BIN */}
+        <div className="absolute bottom-10 right-1/4 flex flex-col items-center text-gray-400 hover:text-red-500 cursor-pointer z-0 transition-colors" onClick={() => handleComingSoon('Move to Bin')}>
+          <Trash2 size={24} strokeWidth={1.5} />
+          <span className="text-[10px] font-bold mt-2">Bin</span>
+        </div>
+
+        {/* SWIPING CARD */}
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -129,69 +157,67 @@ export default function Results() {
             {/* Top Right Card Icons */}
             <div className="absolute top-6 right-6 flex gap-4 text-gray-300">
                <FolderPlus size={18} className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleComingSoon('Add to Deck')} />
-               <Bookmark size={18} className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleComingSoon('Bookmark Card')} />
-               <RotateCcw size={18} className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => setCurrentIndex(0)} title="Restart Deck" />
+               <Bookmark size={18} className="text-blue-500 fill-blue-500 cursor-pointer transition-colors" />
+               <RotateCcw size={18} className="hover:text-blue-500 cursor-pointer transition-colors" onClick={() => handleComingSoon('Refresh Card')} />
             </div>
 
-            {/* QR Code */}
-            <div className="flex justify-center mt-14 mb-6">
-              <img 
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(currentCard.link)}`} 
-                alt="QR Code"
-                className="w-48 h-48 mix-blend-multiply dark:mix-blend-normal dark:bg-white dark:p-2 dark:rounded-xl"
-              />
+            {/* Custom Orbit QR Code */}
+            <div className="flex justify-center mt-12 mb-4">
+              <div className="relative">
+                <img 
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(currentCard.link)}`} 
+                  alt="QR Code"
+                  className="w-48 h-48 rounded-2xl p-1"
+                />
+                {/* The 'O' Logo inside the QR code */}
+                <div className="absolute inset-0 m-auto w-10 h-10 bg-white rounded-full flex items-center justify-center border-4 border-white shadow-sm">
+                  <div className="w-8 h-8 rounded-full border-[3px] border-blue-500"></div>
+                </div>
+              </div>
             </div>
 
             {/* Content Text */}
             <div className="px-8 flex-1 flex flex-col">
               <p className="text-[11px] text-gray-400 mb-2 truncate">{currentCard.source}</p>
-              <h2 className="text-xl font-bold text-[#1a40b3] dark:text-blue-400 leading-snug mb-3 line-clamp-2">
+              <h2 className="text-xl font-medium text-[#1a40b3] dark:text-blue-400 leading-snug mb-3 line-clamp-2">
                 {currentCard.title}
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-3">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-4">
                 {currentCard.snippet}
               </p>
             </div>
 
-            {/* Bottom Card Actions (Edit, Add To, External Link) */}
-            <div className="relative px-8 pb-6 pt-4 flex items-center justify-between text-gray-300 mt-auto">
+            {/* Bottom Card Actions (Edit, Add To) */}
+            <div className="px-8 pb-10 pt-4 flex items-center justify-between text-gray-300 relative">
               <div className="flex flex-col items-center cursor-pointer hover:text-blue-500 transition-colors" onClick={() => handleComingSoon('Edit')}>
                 <SlidersHorizontal size={20} strokeWidth={1.5} />
-                <span className="text-[9px] font-bold uppercase mt-1 text-gray-400">Edit</span>
+                <span className="text-[9px] font-bold mt-1 text-gray-400">Edit</span>
               </div>
               
-              <p className="text-[9px] uppercase tracking-widest text-gray-300 dark:text-gray-500 text-center flex-1">
-                tap to see more · drag to interact
-              </p>
-
               <div className="flex flex-col items-center cursor-pointer hover:text-blue-500 transition-colors" onClick={() => handleComingSoon('Add to')}>
                 <Plus size={20} strokeWidth={1.5} />
-                <span className="text-[9px] font-bold uppercase mt-1 text-gray-400">Add to</span>
+                <span className="text-[9px] font-bold mt-1 text-gray-400">Add to</span>
+              </div>
+
+              {/* Bottom Social Icons inside Card */}
+              <div className="absolute bottom-3 left-8 flex gap-3 text-gray-400">
+                <Mail size={14} className="hover:text-blue-500 cursor-pointer" />
+                <Twitter size={14} className="hover:text-blue-500 cursor-pointer" />
+                <Github size={14} className="hover:text-blue-500 cursor-pointer" />
               </div>
 
               {/* Floating External Link Icon */}
-              <a href={currentCard.link} target="_blank" rel="noreferrer" className="absolute right-8 -top-8 text-gray-400 hover:text-blue-500 transition-colors">
-                 <ExternalLink size={18} />
+              <a href={currentCard.link} target="_blank" rel="noreferrer" className="absolute right-8 bottom-3 text-gray-400 hover:text-blue-500 transition-colors">
+                 <ExternalLink size={16} />
               </a>
             </div>
           </motion.div>
         </AnimatePresence>
       </main>
-
-      {/* Pagination Dots */}
-      <footer className="pb-8 flex justify-center gap-2 z-10">
-        {deck.slice(0, 10).map((_, i) => (
-          <div 
-            key={i} 
-            className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentIndex ? 'bg-gray-400' : 'bg-gray-200 dark:bg-white/10'}`} 
-          />
-        ))}
-      </footer>
     </div>
   );
 }
 
-// Helper X icon
 function X({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
