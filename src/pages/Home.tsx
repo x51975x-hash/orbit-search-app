@@ -40,7 +40,7 @@ async function fetchLiveResults(query: string): Promise<Result[]> {
     return {
       title: item.title || 'No Title',
       link: item.link || '#',
-      url: item.link || '#', // Included both link and url just in case the old types need it!
+      url: item.link || '#', // Included both link 
       snippet: item.snippet || '',
       source: host
     };
