@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Camera, Upload } from 'lucide-react';
+import { X, Camera, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Scanner, type IDetectedBarcode } from '@yudiel/react-qr-scanner';
 import { useApp } from '../context/AppContext';
 import { playBeep } from '../utils/sound';
 
@@ -9,98 +10,112 @@ interface VisionScannerProps {
   onClose: () => void;
 }
 
+type Phase = 'scanning' | 'found' | 'denied';
+
 export default function VisionScanner({ onClose }: VisionScannerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [cameraAvailable, setCameraAvailable] = useState(true);
-  const [phase, setPhase] = useState<'scanning' | 'analyzing' | 'done'>('scanning');
+  const [phase, setPhase] = useState<Phase>('scanning');
+  const [scannedText, setScannedText] = useState('');
   const navigate = useNavigate();
   const { soundEnabled } = useApp();
 
-  useEffect(() => {
-    let active = true;
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' } })
-      .then((stream) => {
-        if (!active) { stream.getTracks().forEach((t) => t.stop()); return; }
-        streamRef.current = stream;
-        if (videoRef.current) videoRef.current.srcObject = stream;
-      })
-      .catch(() => { if (active) setCameraAvailable(false); });
-
-    return () => {
-      active = false;
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-    };
-  }, []);
-
-  const handleSnap = () => {
+  const handleScan = useCallback((codes: IDetectedBarcode[]) => {
+    if (phase !== 'scanning' || codes.length === 0) return;
+    const text = codes[0].rawValue;
+    if (!text) return;
     if (soundEnabled) playBeep();
-    setPhase('analyzing');
+    setScannedText(text);
+    setPhase('found');
     setTimeout(() => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-     navigate('/results', { state: { visual: true, query: 'Orbit' } });
-    }, 1500);
-  };
+      navigate('/results', { state: { query: text, visual: false } });
+    }, 900);
+  }, [phase, soundEnabled, navigate]);
+
+  const handleError = useCallback((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (
+      msg.toLowerCase().includes('permission') ||
+      msg.toLowerCase().includes('notallowed') ||
+      msg.toLowerCase().includes('denied')
+    ) {
+      setPhase('denied');
+    }
+  }, []);
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 bg-black/85 backdrop-blur-lg flex flex-col items-center justify-center"
+      className="fixed inset-0 z-50 bg-black/90 backdrop-blur-lg flex flex-col items-center justify-center"
     >
       {/* Close */}
       <button
         onClick={onClose}
-        className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors"
+        className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors z-10"
       >
         <X size={28} />
       </button>
 
-      <p className="text-white/50 text-sm uppercase tracking-widest mb-8 font-medium">
+      <p className="text-white/50 text-sm uppercase tracking-widest mb-8 font-medium select-none">
         Vision Scanner
       </p>
 
       {/* Viewfinder */}
       <div className="relative w-72 h-72">
         {/* Glowing corners */}
-        {['top-0 left-0', 'top-0 right-0 rotate-90', 'bottom-0 right-0 rotate-180', 'bottom-0 left-0 -rotate-90'].map(
+        {(['top-0 left-0', 'top-0 right-0 rotate-90', 'bottom-0 right-0 rotate-180', 'bottom-0 left-0 -rotate-90'] as const).map(
           (pos, i) => (
             <span
               key={i}
-              className={`absolute ${pos} w-8 h-8 border-t-2 border-l-2 border-cyan-400`}
+              className={`absolute ${pos} w-8 h-8 border-t-2 border-l-2 border-cyan-400 z-10 pointer-events-none`}
               style={{ boxShadow: '0 0 8px #22d3ee' }}
             />
           )
         )}
 
-        {/* Video or fallback */}
+        {/* Scanner or error states */}
         <div className="absolute inset-0 overflow-hidden rounded-sm bg-black">
-          {cameraAvailable ? (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full gap-3 text-white/40 text-sm text-center px-6">
-              <Camera size={32} className="opacity-30" />
-              <p>Camera unavailable</p>
-              <button className="flex items-center gap-2 border border-white/20 rounded-full px-4 py-2 text-xs text-white/60 hover:text-white hover:border-white/40 transition-all">
-                <Upload size={14} /> Upload Image
-              </button>
+          {phase === 'denied' ? (
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-white/60 text-sm text-center px-6">
+              <AlertCircle size={32} className="text-red-400 opacity-70" />
+              <p className="text-white/70 font-medium">Camera access denied</p>
+              <p className="text-white/40 text-xs leading-relaxed">
+                Allow camera access in your browser settings and try again.
+              </p>
             </div>
+          ) : phase === 'found' ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center justify-center h-full gap-3 bg-black/80 px-4"
+            >
+              <CheckCircle2 size={36} className="text-cyan-400" />
+              <p className="text-cyan-400 text-xs uppercase tracking-widest font-mono">Code detected</p>
+              <p className="text-white/60 text-[11px] text-center break-all line-clamp-3 leading-relaxed">
+                {scannedText}
+              </p>
+            </motion.div>
+          ) : (
+            <Scanner
+              onScan={handleScan}
+              onError={handleError}
+              constraints={{ facingMode: 'environment' }}
+              styles={{
+                container: { width: '100%', height: '100%', position: 'relative' },
+                video: { width: '100%', height: '100%', objectFit: 'cover' },
+              }}
+              components={{
+                finder: false,
+              }}
+            />
           )}
         </div>
 
-        {/* Laser line */}
+        {/* Laser line — only while actively scanning */}
         <AnimatePresence>
           {phase === 'scanning' && (
             <motion.div
-              className="absolute left-0 right-0 h-px bg-cyan-400"
+              className="absolute left-0 right-0 h-px bg-cyan-400 z-10 pointer-events-none"
               style={{ boxShadow: '0 0 6px 2px #22d3ee' }}
               initial={{ top: 0, opacity: 0 }}
               animate={{ top: ['0%', '100%', '0%'], opacity: [0, 1, 1, 0] }}
@@ -108,38 +123,21 @@ export default function VisionScanner({ onClose }: VisionScannerProps) {
             />
           )}
         </AnimatePresence>
-
-        {/* Analyzing overlay */}
-        {phase === 'analyzing' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-3"
-          >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-10 h-10 border-2 border-cyan-400 border-t-transparent rounded-full"
-            />
-            <p className="text-cyan-400 text-xs uppercase tracking-widest font-mono">
-              Analyzing spatial data...
-            </p>
-          </motion.div>
-        )}
       </div>
 
-      {/* Snap button */}
-      {phase === 'scanning' && (
-        <motion.button
-          onClick={handleSnap}
-          className="mt-10 px-8 py-3 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm tracking-wide transition-all"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.96 }}
-          style={{ boxShadow: '0 0 20px rgba(34,211,238,0.4)' }}
-        >
-          Snap &amp; Search
-        </motion.button>
-      )}
+      {/* Status text */}
+      <p className="mt-6 text-white/30 text-xs text-center tracking-wide select-none">
+        {phase === 'scanning' && 'Point at a QR code to scan automatically'}
+        {phase === 'found' && 'Navigating to results…'}
+        {phase === 'denied' && (
+          <button
+            onClick={onClose}
+            className="text-white/50 underline underline-offset-2 hover:text-white/80 transition-colors"
+          >
+            Close
+          </button>
+        )}
+      </p>
     </motion.div>
   );
 }
