@@ -39,7 +39,7 @@ export default function VisionScanner({ onClose }: VisionScannerProps) {
     setPhase('analyzing');
     setTimeout(() => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      navigate('/results', { state: { visual: true, query: 'visual search' } });
+     navigate('/results', { state: { visual: true, query: 'Orbit' } });
     }, 1500);
   };
 

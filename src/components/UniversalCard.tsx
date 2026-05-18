@@ -366,7 +366,7 @@ function CardFront({
             {card.title}
           </a>
           <p className={`text-[13px] leading-relaxed line-clamp-3 ${darkMode ? 'text-[#9aa0a6]' : 'text-[#4d5156]'}`}>
-            {card.description}
+           {card.description || card.content || card.snippet || "Explore this result on Orbit."}
           </p>
         </div>
 
@@ -519,7 +519,7 @@ export function UniversalCard({
     <div
       {...wrappedHandlers}
       onClick={handleClick}
-      className={`absolute inset-x-0 mx-auto rounded-[2rem] border overflow-hidden select-none ${
+      className={`absolute inset-x-0 mx-auto rounded-[2rem] border overflow-hidden select-none touch-none ${
         isDragging ? 'cursor-grabbing' : 'cursor-grab'
       } ${darkMode ? 'bg-zinc-800/95 border-white/10' : 'bg-white/95 border-gray-100'}`}
       style={{
