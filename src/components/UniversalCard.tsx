@@ -575,7 +575,7 @@ export function UniversalCard({
   const [flipped, setFlipped] = useState(false);
   const didDragRef = useRef(false);
 
-  const { handlers, offset, isDragging, dragDir } = useDragTracking({
+  const { handlers, offset, isDragging, dragDir, setCardRef } = useDragTracking({
     onSwipeLeft:  () => onSwipe('left',  card),
     onSwipeRight: () => onSwipe('right', card),
     onSwipeUp:    () => onSwipe('up',    card),
@@ -607,6 +607,7 @@ export function UniversalCard({
 
   return (
     <div
+      ref={setCardRef}
       {...wrappedHandlers}
       onClick={handleClick}
       className={`absolute inset-x-0 mx-auto rounded-[2rem] border overflow-hidden select-none touch-none ${
