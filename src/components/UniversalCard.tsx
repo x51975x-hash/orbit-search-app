@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import QRCodeGen from 'qrcode';
 import {
   FolderPlus, Check, ExternalLink, Mail, Phone, MapPin,
-  Twitter, Github, Share2, X, BookmarkPlus, LayoutList, RefreshCw,
+  Twitter, Facebook, Link, Share2, X, BookmarkPlus, LayoutList, RefreshCw, Copy, CheckCheck,
 } from 'lucide-react';
 import { Result } from '../data/results';
 import { useLibrary } from '../hooks/useLibrary';
@@ -284,10 +284,33 @@ function CardFront({
   onFlip?: () => void;
   isStack?: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
+
   const domain = useMemo(
     () => card.displayUrl || card.url.replace(/^https?:\/\/(www\.)?/, '').split('/')[0],
     [card.displayUrl, card.url],
   );
+
+  const rootDomain = useMemo(() => {
+    try {
+      return new URL(card.url).hostname.replace(/^www\./, '');
+    } catch {
+      return domain.split('/')[0];
+    }
+  }, [card.url, domain]);
+
+  const faviconUrl = `https://www.google.com/s2/favicons?domain=${rootDomain}&sz=32`;
+
+  const handleCopyLink = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(card.url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
+
+  const twitterShareUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(card.url)}&text=${encodeURIComponent(card.title)}`;
+  const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(card.url)}`;
 
   return (
     <div className="flex flex-col w-full h-full">
@@ -351,9 +374,20 @@ function CardFront({
       <div className="flex flex-col overflow-hidden flex-1">
         {/* Text block — grows to fill, text clamped so it never overflows */}
         <div className="flex flex-col flex-1 px-5 pt-4 pb-2 overflow-hidden">
-          <p className={`text-[11px] mb-0.5 truncate font-medium flex-shrink-0 ${darkMode ? 'text-[#5f6368]' : 'text-[#3c4043]'}`}>
-            {domain}
-          </p>
+          {/* Domain row with favicon */}
+          <div className="flex items-center gap-1.5 mb-1 flex-shrink-0">
+            <img
+              src={faviconUrl}
+              alt=""
+              width={14}
+              height={14}
+              className="rounded-sm flex-shrink-0 opacity-80"
+              onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+            />
+            <p className={`text-[11px] truncate font-medium ${darkMode ? 'text-[#9aa0a6]' : 'text-[#5f6368]'}`}>
+              {domain}
+            </p>
+          </div>
           <a
             href={card.url}
             target="_blank"
@@ -365,19 +399,75 @@ function CardFront({
           >
             {card.title}
           </a>
-          <p className={`text-[13px] leading-relaxed line-clamp-3 ${darkMode ? 'text-[#9aa0a6]' : 'text-[#4d5156]'}`}>
-           {card.description || card.content || card.snippet || "Explore this result on Orbit."}
+          <p className={`text-[13px] leading-relaxed line-clamp-3 ${darkMode ? 'text-[#bdc1c6]' : 'text-[#3c4043]'}`}>
+           {card.description || "Explore this result on Orbit."}
           </p>
         </div>
 
-        {/* Footer icons */}
-        <div className={`flex items-center gap-0.5 px-3 py-2 border-t flex-shrink-0 ${darkMode ? 'border-white/8' : 'border-gray-100'}`}>
-          {card.mapsUrl && <FooterBtn href={card.mapsUrl} darkMode={darkMode}><MapPin size={13} /></FooterBtn>}
-          {card.phone   && <FooterBtn href={`tel:${card.phone}`} darkMode={darkMode}><Phone size={13} /></FooterBtn>}
-          {card.email   && <FooterBtn href={`mailto:${card.email}`} darkMode={darkMode}><Mail size={13} /></FooterBtn>}
-          {card.twitter && <FooterBtn href={card.twitter} darkMode={darkMode}><Twitter size={13} /></FooterBtn>}
-          {card.github  && <FooterBtn href={card.github} darkMode={darkMode}><Github size={13} /></FooterBtn>}
-          <FooterBtn href={card.url} darkMode={darkMode} className="ml-auto"><ExternalLink size={13} /></FooterBtn>
+        {/* Social share + footer icons */}
+        <div className={`flex-shrink-0 border-t ${darkMode ? 'border-white/8' : 'border-gray-100'}`}>
+          {/* Share row */}
+          {!isStack && (
+            <div className={`flex items-center gap-1 px-4 py-2 border-b ${darkMode ? 'border-white/8' : 'border-gray-50'}`}>
+              <span className={`text-[10px] font-semibold uppercase tracking-wide mr-1 flex-shrink-0 ${darkMode ? 'text-white/30' : 'text-slate-400'}`}>
+                Share
+              </span>
+              <a
+                href={twitterShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title="Share on Twitter / X"
+                className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+                  darkMode
+                    ? 'text-white/40 hover:text-white/80 hover:bg-white/10'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Twitter size={12} />
+              </a>
+              <a
+                href={facebookShareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title="Share on Facebook"
+                className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+                  darkMode
+                    ? 'text-white/40 hover:text-white/80 hover:bg-white/10'
+                    : 'text-slate-500 hover:text-[#1877f2] hover:bg-blue-50'
+                }`}
+              >
+                <Facebook size={12} />
+              </a>
+              <button
+                onClick={handleCopyLink}
+                title={copied ? 'Copied!' : 'Copy link'}
+                className={`p-1.5 rounded-full transition-colors flex-shrink-0 ${
+                  copied
+                    ? darkMode ? 'text-green-400 bg-green-500/15' : 'text-green-600 bg-green-50'
+                    : darkMode ? 'text-white/40 hover:text-white/80 hover:bg-white/10' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                {copied ? <CheckCheck size={12} /> : <Copy size={12} />}
+              </button>
+              {copied && (
+                <span className={`text-[10px] font-medium ml-0.5 ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                  Copied!
+                </span>
+              )}
+              <FooterBtn href={card.url} darkMode={darkMode} className="ml-auto"><ExternalLink size={12} /></FooterBtn>
+            </div>
+          )}
+
+          {/* Contact/social icons row */}
+          <div className={`flex items-center gap-0.5 px-3 py-1.5 flex-shrink-0`}>
+            {card.mapsUrl && <FooterBtn href={card.mapsUrl} darkMode={darkMode}><MapPin size={12} /></FooterBtn>}
+            {card.phone   && <FooterBtn href={`tel:${card.phone}`} darkMode={darkMode}><Phone size={12} /></FooterBtn>}
+            {card.email   && <FooterBtn href={`mailto:${card.email}`} darkMode={darkMode}><Mail size={12} /></FooterBtn>}
+            {card.twitter && <FooterBtn href={card.twitter} darkMode={darkMode}><Twitter size={12} /></FooterBtn>}
+            {isStack && <FooterBtn href={card.url} darkMode={darkMode} className="ml-auto"><ExternalLink size={12} /></FooterBtn>}
+          </div>
         </div>
 
         {!isStack && (
