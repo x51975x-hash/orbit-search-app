@@ -145,6 +145,31 @@ function SearchBar({
   compact?: boolean;
   autoFocus?: boolean;
 }) {
+  const [suggestions, setSuggestions] = useState([]);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!value || !value.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${value}&limit=6&origin=*&format=json`);
+        const data = await response.json();
+        setSuggestions(data[1]); 
+      } catch (error) {
+        console.error("Could not fetch suggestions", error);
+      }
+    };
+
+    const delayAPI = setTimeout(() => {
+      fetchSuggestions();
+    }, 300);
+
+    return () => clearTimeout(delayAPI);
+  }, [value]);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -177,11 +202,33 @@ function SearchBar({
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onFocus={() => setIsFocused(true)}
+onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           placeholder="Search anything…"
           className={`flex-1 bg-transparent outline-none placeholder:transition-colors ${
             compact ? 'text-sm' : 'text-base'
           } ${dark ? 'text-white placeholder:text-white/30' : 'text-gray-900 placeholder:text-gray-400'}`}
         />
+        {isFocused && suggestions && suggestions.length > 0 && (
+  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-gray-200 dark:border-slate-700 overflow-hidden z-50 text-left">
+    <ul className="py-2">
+      {suggestions.map((suggestion, index) => (
+        <li 
+          key={index} 
+          className="px-5 py-3 hover:bg-gray-100 dark:hover:bg-slate-800 cursor-pointer flex items-center gap-3 text-slate-700 dark:text-slate-200 transition-colors"
+          onMouseDown={(e) => {
+            e.preventDefault(); 
+            onChange(suggestion); 
+            setIsFocused(false);
+          }}
+        >
+          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+          {suggestion}
+        </li>
+      ))}
+    </ul>
+  </div>
+)}
         {value && (
           <button
             type="button"
@@ -212,6 +259,32 @@ export default function NovaSearch() {
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [loading, setLoading] = useState(false);
   const mountedRef = useRef(true);
+
+  const [suggestions, setSuggestions] = useState([]);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setSuggestions([]);
+      return;
+    }
+
+    const fetchSuggestions = async () => {
+      try {
+        const response = await fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${query}&limit=6&origin=*&format=json`);
+        const data = await response.json();
+        setSuggestions(data[1]); 
+      } catch (error) {
+        console.error("Could not fetch suggestions", error);
+      }
+    };
+
+    const delayAPI = setTimeout(() => {
+      fetchSuggestions();
+    }, 300);
+
+    return () => clearTimeout(delayAPI);
+  }, [query]);
 
   useEffect(() => {
     return () => { mountedRef.current = false; };
