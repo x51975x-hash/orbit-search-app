@@ -13,7 +13,7 @@ import UserMenu from '../components/UserMenu';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useLibrary } from '../hooks/useLibrary';
-import { Result } from '../data/results';
+import { Result } from '../types/result';
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast({ msg }: { msg: string }) {

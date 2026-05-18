@@ -11,7 +11,7 @@ import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { useLibrary } from '../hooks/useLibrary';
 import { useDragTracking } from '../hooks/useDragTracking';
-import { Result } from '../data/results';
+import { Result } from '../types/result';
 
 type Tab = 'saved' | 'decks';
 

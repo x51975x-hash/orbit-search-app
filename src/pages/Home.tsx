@@ -7,7 +7,7 @@ import VisionScanner from '../components/VisionScanner';
 import AuthModal from '../components/AuthModal';
 import Footer from '../components/Footer';
 import UserMenu from '../components/UserMenu';
-import { searchResults, Result } from '../data/results';
+import { Result } from '../types/result';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { playTick } from '../utils/sound';
@@ -33,16 +33,24 @@ async function fetchLiveResults(query: string): Promise<Result[]> {
   if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   const data = await res.json();
   
-  // Maps Serper data to exactly what your Results page expects
-  return (data.organic || []).map((item: any) => {
-    let host = 'link';
-    try { host = new URL(item.link).hostname.replace('www.', ''); } catch (e) {}
+  return (data.organic || []).map((item: any, i: number): Result => {
+    let host = '';
+    let displayUrl = item.link || '#';
+    try {
+      const u = new URL(item.link);
+      host = u.hostname.replace(/^www\./, '');
+      displayUrl = host + (u.pathname !== '/' ? u.pathname : '');
+    } catch (_) {}
+    const description = item.snippet || item.description || '';
     return {
-      title: item.title || 'No Title',
-      link: item.link || '#',
-      url: item.link || '#', // Included both link 
-      snippet: item.snippet || '',
-      source: host
+      id: `serper-${i}-${Date.now()}`,
+      title: item.title || host || 'Untitled',
+      description,
+      longDescription: description,
+      advertiser: host,
+      url: item.link || '#',
+      displayUrl,
+      tags: [],
     };
   });
 }
@@ -93,9 +101,8 @@ export default function Home() {
     try {
       const results = await fetchLiveResults(trimmed);
       navigate('/results', { state: { results, query: trimmed } });
-    } catch {
-      const results = searchResults(trimmed);
-      navigate('/results', { state: { results, query: trimmed } });
+    } catch (err) {
+      navigate('/results', { state: { results: [], query: trimmed, error: true } });
     } finally {
       setSearching(false);
     }
@@ -168,7 +175,7 @@ export default function Home() {
   const handleCapture = () => {
     stopStream();
     setShowCameraModal(false);
-    navigate('/results', { state: { results: searchResults('', true), visual: true } });
+    navigate('/results', { state: { results: [], visual: true } });
   };
 
   const handleCloseCamera = () => {
@@ -179,7 +186,7 @@ export default function Home() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    navigate('/results', { state: { results: searchResults('', true), visual: true } });
+    navigate('/results', { state: { results: [], visual: true } });
     e.target.value = '';
   };
 

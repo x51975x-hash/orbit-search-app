@@ -5,7 +5,7 @@ import {
   FolderPlus, Check, ExternalLink, Mail, Phone, MapPin,
   Twitter, Facebook, Link, Share2, X, BookmarkPlus, LayoutList, RefreshCw, Copy, CheckCheck,
 } from 'lucide-react';
-import { Result } from '../data/results';
+import { Result } from '../types/result';
 import { useLibrary } from '../hooks/useLibrary';
 import { useDragTracking } from '../hooks/useDragTracking';
 

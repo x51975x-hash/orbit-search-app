@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Result } from '../data/results';
+import { Result } from '../types/result';
 
 interface Deck {
   id: string;

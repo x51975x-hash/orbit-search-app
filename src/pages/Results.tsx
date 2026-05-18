@@ -7,7 +7,7 @@ import Logo from '../components/Logo';
 import { UniversalCard, StackCard, GridCard, CARD_SIZE_STYLE } from '../components/UniversalCard';
 import Footer from '../components/Footer';
 import AuthModal from '../components/AuthModal';
-import { searchResults, Result } from '../data/results';
+import { Result } from '../types/result';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { playWhoosh } from '../utils/sound';
@@ -39,9 +39,9 @@ export default function Results() {
   const library = useLibrary();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  const state    = location.state as { results?: Result[]; query?: string; visual?: boolean } | null;
+  const state    = location.state as { results?: Result[]; query?: string; visual?: boolean; error?: boolean } | null;
   const isVisual = state?.visual ?? false;
-  const allCards = state?.results ?? searchResults(state?.query ?? '', isVisual);
+  const allCards = state?.results ?? [];
 
   const [batchStart, setBatchStart] = useState(0);
   const [deck, setDeck]             = useState<Result[]>(() => allCards.slice(0, BATCH_SIZE));
